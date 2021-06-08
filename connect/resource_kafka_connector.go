@@ -70,19 +70,15 @@ func connectorCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	connectorResponse, err := c.CreateConnector(req, true)
-
-	fmt.Printf("[INFO] Created the connector %v\n", connectorResponse)
-
-	if err == nil {
-		newConfFiltered := removeSecondKeysFromFirst(connectorResponse.Config, sensitiveCache)
-		d.SetId(name)
-		d.Set("config_sensitive", sensitiveCache)
-		d.Set("config", newConfFiltered)
-	}
-
 	if err != nil {
 		return err
 	}
+	fmt.Printf("[INFO] Created the connector %v\n", connectorResponse)
+
+	newConfFiltered := removeSecondKeysFromFirst(connectorResponse.Config, sensitiveCache)
+	d.SetId(name)
+	d.Set("config_sensitive", sensitiveCache)
+	d.Set("config", newConfFiltered)
 
 	return connectorRead(d, meta)
 }
@@ -114,7 +110,7 @@ func connectorUpdate(d *schema.ResourceData, meta interface{}) error {
 	if n, ok := config["name"]; ok && n != name {
 		return errors.New("config.name must be identical to the resource name")
 	} else if !ok {
-		return errors.New("config.name is the mandatory field indentical to the resource name")
+		return errors.New("config.name is the mandatory field identical to the resource name")
 	}
 
 	log.Printf("[INFO] Requesting update to connector %v", name)
@@ -127,19 +123,16 @@ func connectorUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[INFO] Looking for %s", name)
 	conn, err := c.UpdateConnector(req, true)
-
-	if err == nil {
-		newConfFiltered := removeSecondKeysFromFirst(conn.Config, sensitiveCache)
-		//log.Printf("[INFO] Full config received from update is: %v", conn.Config)
-		log.Printf("[INFO] Local config nonsensitive updated to: %v", newConfFiltered)
-		//log.Printf("[INFO] Local config_sensitive updated to:  %v", sensitiveCache)
-		d.Set("config", newConfFiltered)
-		d.Set("config_sensitive", sensitiveCache)
-	}
-
 	if err != nil {
 		return err
 	}
+
+	newConfFiltered := removeSecondKeysFromFirst(conn.Config, sensitiveCache)
+	//log.Printf("[INFO] Full config received from update is: %v", conn.Config)
+	log.Printf("[INFO] Local config nonsensitive updated to: %v", newConfFiltered)
+	//log.Printf("[INFO] Local config_sensitive updated to:  %v", sensitiveCache)
+	d.Set("config", newConfFiltered)
+	d.Set("config_sensitive", sensitiveCache)
 
 	return connectorRead(d, meta)
 }
@@ -157,16 +150,17 @@ func connectorRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[INFO] Current local config nonsensitive values are: %v", config)
 	//log.Printf("[INFO] Current local config_sensitive values are: %v", sensitiveCache)
 	conn, err := c.GetConnector(req)
-
-	if err == nil {
-		// we do not want the sensitive values to appear in the non-masked 'config' field
-		// use cached sensitive values to get the correct keys to remove from the newly read config
-		newConfFiltered := removeSecondKeysFromFirst(conn.Config, sensitiveCache)
-		d.Set("config_sensitive", sensitiveCache)
-		d.Set("config", newConfFiltered)
-		log.Printf("[INFO] Local config nonsensitive data updated to %v", newConfFiltered)
-		//log.Printf("[INFO] Local config_sensitive data updated to %v", sensitiveCache)
+	if err != nil {
+		return err
 	}
+
+	// we do not want the sensitive values to appear in the non-masked 'config' field
+	// use cached sensitive values to get the correct keys to remove from the newly read config
+	newConfFiltered := removeSecondKeysFromFirst(conn.Config, sensitiveCache)
+	d.Set("config_sensitive", sensitiveCache)
+	d.Set("config", newConfFiltered)
+	log.Printf("[INFO] Local config nonsensitive data updated to %v", newConfFiltered)
+	//log.Printf("[INFO] Local config_sensitive data updated to %v", sensitiveCache)
 
 	return nil
 }
